@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  # Slimmer artifacts and faster cold builds; we never debug from CI binaries.
+  CARGO_INCREMENTAL: 0
+  # Deliberately no `RUSTFLAGS: -D warnings` here: RUSTFLAGS also applies to
+  # dependencies, so one deprecation warning upstream would break the build.
+  # The clippy step denies warnings for our own code instead.
+
+jobs:
+  check:
+    name: Test and lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # webkit2gtk backs the login window; the rest are what eframe needs to link
+      # against X11, Wayland and GL.
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libxkbcommon-dev \
+            libwayland-dev \
+            libgl1-mesa-dev \
+            pkg-config
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Test
+        run: cargo test --all-features
+
+      # Catches a release-only break — LTO and the stripped profile are configured
+      # differently from the debug build the tests use.
+      - name: Build release
+        run: cargo build --release

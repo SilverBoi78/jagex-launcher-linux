@@ -385,8 +385,7 @@ mod tests {
         let good = token_with(serde_json::json!({ "sub": "user-1", "nonce": flow.nonce }));
         assert!(flow.verify_consent_token(&good).is_ok());
 
-        let wrong_nonce =
-            token_with(serde_json::json!({ "sub": "user-1", "nonce": "replayed" }));
+        let wrong_nonce = token_with(serde_json::json!({ "sub": "user-1", "nonce": "replayed" }));
         assert!(flow.verify_consent_token(&wrong_nonce).is_err());
 
         let wrong_sub = token_with(serde_json::json!({ "sub": "user-2", "nonce": flow.nonce }));

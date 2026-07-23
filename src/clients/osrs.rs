@@ -83,10 +83,10 @@ struct MetaFileEntry {
 fn fix_url(url: &str) -> String {
     const SUFFIX: &str = "-akamai.aws.snxd.com/";
     if let Some(rest) = url.strip_prefix("http://") {
-        if let Some((host_prefix, path)) = rest.split_once(SUFFIX) {
-            if host_prefix.len() == 5 {
-                return format!("https://{host_prefix}.akamaized.net/{path}");
-            }
+        if let Some((host_prefix, path)) = rest.split_once(SUFFIX)
+            && host_prefix.len() == 5
+        {
+            return format!("https://{host_prefix}.akamaized.net/{path}");
         }
         return format!("https://{rest}");
     }
@@ -103,10 +103,7 @@ fn piece_url(base_url: &str, piece_format: &str, digest_hex: &str) -> Result<Str
         bail!("chunk digest was too short: {digest_hex}");
     }
     let path = piece_format
-        .replace(
-            "{SubString:0,2,{TargetDigest}}",
-            &digest_hex[..2],
-        )
+        .replace("{SubString:0,2,{TargetDigest}}", &digest_hex[..2])
         .replace("{TargetDigest}", digest_hex);
     Ok(format!("{}{}", fix_url(base_url), path))
 }
@@ -131,7 +128,9 @@ fn locate_exe(files: &[MetaFileEntry]) -> Result<(u64, u64)> {
     for file in files {
         if file.name.to_ascii_lowercase().ends_with(".exe") {
             if found.is_some() {
-                bail!("the OSRS metafile listed more than one .exe — cannot tell which is the client");
+                bail!(
+                    "the OSRS metafile listed more than one .exe — cannot tell which is the client"
+                );
             }
             found = Some((offset, file.size));
         }
@@ -229,7 +228,9 @@ fn ensure_exe(client: &reqwest::blocking::Client, log: &Log) -> Result<PathBuf> 
     let production = match environments {
         Ok(e) => e.environments.production,
         Err(e) if exe.is_file() => {
-            log.info(format!("update check failed ({e}); using the installed client"));
+            log.info(format!(
+                "update check failed ({e}); using the installed client"
+            ));
             return Ok(exe);
         }
         Err(e) => return Err(e).context("could not check for OSRS client updates"),
@@ -239,11 +240,17 @@ fn ensure_exe(client: &reqwest::blocking::Client, log: &Log) -> Result<PathBuf> 
         log.info("the OSRS client is up to date");
         return Ok(exe);
     }
-    log.info(format!("updating the OSRS client to {}", production.version));
+    log.info(format!(
+        "updating the OSRS client to {}",
+        production.version
+    ));
 
     let catalog: Catalog = fetch_metadata(
         client,
-        &format!("{DIRECT6_URL}{PLATFORM}/catalog/{}/catalog.json", production.id),
+        &format!(
+            "{DIRECT6_URL}{PLATFORM}/catalog/{}/catalog.json",
+            production.id
+        ),
     )?;
     let metafile: Metafile = fetch_metadata(client, &fix_url(&catalog.metafile))?;
 
@@ -288,7 +295,10 @@ pub fn prepare(client: &reqwest::blocking::Client, log: &Log) -> Result<Launch> 
         program: wine,
         args: vec![exe.to_string_lossy().into_owned()],
         env: vec![
-            ("WINEPREFIX".to_string(), prefix.to_string_lossy().into_owned()),
+            (
+                "WINEPREFIX".to_string(),
+                prefix.to_string_lossy().into_owned(),
+            ),
             // Only meaningful under umu-run; harmless under plain wine.
             ("GAMEID".to_string(), UMU_GAME_ID.to_string()),
             ("PROTONPATH".to_string(), "GE-Latest".to_string()),
@@ -401,7 +411,10 @@ mod tests {
                                     "pieceFormat":"{SubString:0,2,{TargetDigest}}/{TargetDigest}"}}}"#,
         )
         .unwrap();
-        assert_eq!(fix_url(&catalog.metafile), "https://abcde.akamaized.net/meta/x");
+        assert_eq!(
+            fix_url(&catalog.metafile),
+            "https://abcde.akamaized.net/meta/x"
+        );
         assert_eq!(
             catalog.config.remote.piece_format,
             "{SubString:0,2,{TargetDigest}}/{TargetDigest}"

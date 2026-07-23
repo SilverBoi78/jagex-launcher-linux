@@ -4,9 +4,9 @@
 //! downloading — runs on a worker thread and reports back through [`Log`] and a channel,
 //! so the window never blocks.
 
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::sync::Arc;
 
 use crate::clients::{self, JxEnv};
 use crate::log::Log;
@@ -192,7 +192,8 @@ impl App {
     }
 
     fn launch(&mut self, ctx: &egui::Context, which: Client) {
-        let (Some(session), Some(character)) = (self.session.clone(), self.selected_character.clone())
+        let (Some(session), Some(character)) =
+            (self.session.clone(), self.selected_character.clone())
         else {
             self.log.error("sign in and pick a character first");
             return;
@@ -314,64 +315,62 @@ impl eframe::App for App {
 
 impl App {
     fn account_bar(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        ui.horizontal(|ui| {
-            match &self.session {
-                Some(session) => {
-                    let names = session.account.character_names();
-                    if let Some(account_name) = &session.account_name {
-                        ui.strong(account_name.clone());
-                        ui.separator();
+        ui.horizontal(|ui| match &self.session {
+            Some(session) => {
+                let names = session.account.character_names();
+                if let Some(account_name) = &session.account_name {
+                    ui.strong(account_name.clone());
+                    ui.separator();
+                }
+                ui.label("Character:");
+
+                let selected = self
+                    .selected_character
+                    .clone()
+                    .unwrap_or_else(|| "—".to_string());
+                egui::ComboBox::from_id_salt("character")
+                    .selected_text(selected)
+                    .show_ui(ui, |ui| {
+                        for name in &names {
+                            ui.selectable_value(
+                                &mut self.selected_character,
+                                Some(name.clone()),
+                                name,
+                            );
+                        }
+                    });
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui
+                        .add_enabled(!self.is_busy(), egui::Button::new("Sign out"))
+                        .clicked()
+                    {
+                        self.sign_out(ctx);
                     }
-                    ui.label("Character:");
-
-                    let selected = self
-                        .selected_character
-                        .clone()
-                        .unwrap_or_else(|| "—".to_string());
-                    egui::ComboBox::from_id_salt("character")
-                        .selected_text(selected)
-                        .show_ui(ui, |ui| {
-                            for name in &names {
-                                ui.selectable_value(
-                                    &mut self.selected_character,
-                                    Some(name.clone()),
-                                    name,
-                                );
-                            }
-                        });
-
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui
-                            .add_enabled(!self.is_busy(), egui::Button::new("Sign out"))
-                            .clicked()
-                        {
-                            self.sign_out(ctx);
-                        }
-                        if ui
-                            .add_enabled(!self.is_busy(), egui::Button::new("Refresh"))
-                            .on_hover_text("Re-read the character list and check the session")
-                            .clicked()
-                        {
-                            self.refresh_characters(ctx);
-                        }
-                        ui.toggle_value(&mut self.show_settings, "Settings");
-                    });
-                }
-                None => {
-                    ui.label("Not signed in");
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui
-                            .add_enabled(
-                                !self.is_busy(),
-                                egui::Button::new("Sign in with a Jagex account"),
-                            )
-                            .clicked()
-                        {
-                            self.sign_in(ctx);
-                        }
-                        ui.toggle_value(&mut self.show_settings, "Settings");
-                    });
-                }
+                    if ui
+                        .add_enabled(!self.is_busy(), egui::Button::new("Refresh"))
+                        .on_hover_text("Re-read the character list and check the session")
+                        .clicked()
+                    {
+                        self.refresh_characters(ctx);
+                    }
+                    ui.toggle_value(&mut self.show_settings, "Settings");
+                });
+            }
+            None => {
+                ui.label("Not signed in");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui
+                        .add_enabled(
+                            !self.is_busy(),
+                            egui::Button::new("Sign in with a Jagex account"),
+                        )
+                        .clicked()
+                    {
+                        self.sign_in(ctx);
+                    }
+                    ui.toggle_value(&mut self.show_settings, "Settings");
+                });
             }
         });
     }
@@ -434,9 +433,17 @@ impl App {
         ui.add_space(10.0);
         ui.label("Launch command wrappers — use %command% for the real command");
         for (label, id, value) in [
-            ("RuneLite", "wrap_rl", &mut self.config.runelite_launch_command),
+            (
+                "RuneLite",
+                "wrap_rl",
+                &mut self.config.runelite_launch_command,
+            ),
             ("RS3", "wrap_rs3", &mut self.config.rs3_launch_command),
-            ("Old School", "wrap_osrs", &mut self.config.osrs_launch_command),
+            (
+                "Old School",
+                "wrap_osrs",
+                &mut self.config.osrs_launch_command,
+            ),
         ] {
             ui.horizontal(|ui| {
                 ui.label(format!("{label}:"));
@@ -515,5 +522,6 @@ fn run_login_window() -> anyhow::Result<Session> {
         );
     }
 
-    serde_json::from_slice(&output.stdout).context("could not read the session from the sign-in window")
+    serde_json::from_slice(&output.stdout)
+        .context("could not read the session from the sign-in window")
 }

@@ -125,7 +125,9 @@ fn ensure_binary(client: &reqwest::blocking::Client, log: &Log) -> Result<PathBu
     let entry = match index {
         Ok(text) => parse_packages(&text)?,
         Err(e) if binary.is_file() => {
-            log.info(format!("update check failed ({e}); using the installed client"));
+            log.info(format!(
+                "update check failed ({e}); using the installed client"
+            ));
             return Ok(binary);
         }
         Err(e) => return Err(e).context("could not fetch the RS3 package index"),
@@ -162,7 +164,9 @@ fn verify_sha256(bytes: &[u8], expected: &str) -> Result<()> {
     use sha2::{Digest, Sha256};
     let actual = hex::encode(Sha256::digest(bytes));
     if !actual.eq_ignore_ascii_case(expected) {
-        bail!("the downloaded RS3 package did not match its published checksum — refusing to run it");
+        bail!(
+            "the downloaded RS3 package did not match its published checksum — refusing to run it"
+        );
     }
     Ok(())
 }
@@ -263,7 +267,9 @@ Description: RuneScape Game Client
             header.set_size(contents.len() as u64);
             header.set_mode(0o755);
             header.set_cksum();
-            builder.append_data(&mut header, inner_path, contents).unwrap();
+            builder
+                .append_data(&mut header, inner_path, contents)
+                .unwrap();
             builder.finish().unwrap();
         }
 
@@ -278,7 +284,10 @@ Description: RuneScape Game Client
         {
             let mut builder = ar::Builder::new(&mut deb);
             builder
-                .append(&ar::Header::new(b"debian-binary".to_vec(), 4), &b"2.0\n"[..])
+                .append(
+                    &ar::Header::new(b"debian-binary".to_vec(), 4),
+                    &b"2.0\n"[..],
+                )
                 .unwrap();
             builder
                 .append(
@@ -301,7 +310,10 @@ Description: RuneScape Game Client
 
     #[test]
     fn a_deb_without_the_game_binary_is_an_error() {
-        let deb = fake_deb("./usr/share/doc/runescape-launcher/copyright", b"legal text");
+        let deb = fake_deb(
+            "./usr/share/doc/runescape-launcher/copyright",
+            b"legal text",
+        );
         let err = extract_game_binary(&deb).unwrap_err().to_string();
         assert!(err.contains(GAME_PATH_IN_TAR), "unexpected error: {err}");
     }

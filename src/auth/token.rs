@@ -47,7 +47,9 @@ impl TokenResponse {
             .map(IdToken::new)
             .or_else(|| previous.map(|p| p.id_token.clone()))
             .context("token response had no id_token")?;
-        let expires_in = self.expires_in.context("token response had no expires_in")?;
+        let expires_in = self
+            .expires_in
+            .context("token response had no expires_in")?;
 
         Ok(Tokens {
             access_token: self.access_token,
@@ -59,7 +61,11 @@ impl TokenResponse {
 }
 
 /// Exchanges the launcher leg's authorization code for tokens.
-pub fn exchange_code(client: &reqwest::blocking::Client, code: &str, verifier: &str) -> Result<Tokens> {
+pub fn exchange_code(
+    client: &reqwest::blocking::Client,
+    code: &str,
+    verifier: &str,
+) -> Result<Tokens> {
     let form = [
         ("grant_type", "authorization_code"),
         ("client_id", LAUNCHER_CLIENT_ID),
@@ -133,7 +139,11 @@ mod tests {
             None,
         )
         .unwrap();
-        let refreshed = parse(r#"{"access_token":"new","expires_in":3600}"#, Some(&previous)).unwrap();
+        let refreshed = parse(
+            r#"{"access_token":"new","expires_in":3600}"#,
+            Some(&previous),
+        )
+        .unwrap();
         assert_eq!(refreshed.access_token, "new");
         assert_eq!(refreshed.refresh_token, "rt");
         assert_eq!(refreshed.id_token.encoded, "h.p.s");
@@ -143,8 +153,11 @@ mod tests {
     fn a_first_exchange_must_carry_everything() {
         assert!(parse(r#"{"access_token":"at","expires_in":3600}"#, None).is_err());
         assert!(
-            parse(r#"{"access_token":"at","refresh_token":"rt","id_token":"h.p.s"}"#, None)
-                .is_err(),
+            parse(
+                r#"{"access_token":"at","refresh_token":"rt","id_token":"h.p.s"}"#,
+                None
+            )
+            .is_err(),
             "missing expires_in should be an error"
         );
     }

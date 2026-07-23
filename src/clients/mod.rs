@@ -35,11 +35,16 @@ impl JxEnv {
     /// Builds the environment for the named character of a stored session.
     pub fn for_character(session: &Session, display_name: &str) -> Result<Self> {
         match &session.account {
-            AccountSession::Jagex { session_id, accounts } => {
+            AccountSession::Jagex {
+                session_id,
+                accounts,
+            } => {
                 let account = accounts
                     .iter()
                     .find(|a| a.display_name.eq_ignore_ascii_case(display_name))
-                    .with_context(|| format!("no character named {display_name} on this account"))?;
+                    .with_context(|| {
+                        format!("no character named {display_name} on this account")
+                    })?;
                 Ok(Self::Jagex {
                     session_id: session_id.clone(),
                     character_id: account.account_id.clone(),
@@ -375,8 +380,7 @@ mod tests {
         assert_eq!(args, vec!["-jar", "rl.jar"]);
 
         // whitespace-only is treated as absent
-        let (program, _) =
-            apply_wrapper(Path::new("/usr/bin/java"), &[], Some("   ")).unwrap();
+        let (program, _) = apply_wrapper(Path::new("/usr/bin/java"), &[], Some("   ")).unwrap();
         assert_eq!(program, Path::new("/usr/bin/java"));
     }
 

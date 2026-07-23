@@ -69,9 +69,7 @@ mod tests {
         let pkce = Pkce::generate();
         assert_eq!(pkce.verifier.len(), VERIFIER_LENGTH);
         assert!(
-            pkce.verifier
-                .bytes()
-                .all(|b| VERIFIER_CHARS.contains(&b)),
+            pkce.verifier.bytes().all(|b| VERIFIER_CHARS.contains(&b)),
             "verifier contained a character needing escaping: {}",
             pkce.verifier
         );

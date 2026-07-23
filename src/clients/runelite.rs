@@ -98,7 +98,9 @@ fn ensure_jar(client: &reqwest::blocking::Client, log: &Log) -> Result<PathBuf> 
             return existing_jar(&jar);
         }
         Err(e) if jar.is_file() => {
-            log.info(format!("update check failed ({e}); using the installed copy"));
+            log.info(format!(
+                "update check failed ({e}); using the installed copy"
+            ));
             return Ok(jar);
         }
         Err(e) => return Err(e).context("could not check for RuneLite updates"),
@@ -143,7 +145,10 @@ pub fn prepare(
         Some(path) => {
             let path = PathBuf::from(path);
             if !path.is_file() {
-                anyhow::bail!("the configured RuneLite jar does not exist: {}", path.display());
+                anyhow::bail!(
+                    "the configured RuneLite jar does not exist: {}",
+                    path.display()
+                );
             }
             path
         }
@@ -212,7 +217,9 @@ mod tests {
 
     #[test]
     fn missing_jar_asset_is_reported_as_absent() {
-        let releases = releases_from(r#"[{"assets":[{"name":"RuneLite.exe","id":1,"size":1,"browser_download_url":"u"}]}]"#);
+        let releases = releases_from(
+            r#"[{"assets":[{"name":"RuneLite.exe","id":1,"size":1,"browser_download_url":"u"}]}]"#,
+        );
         assert!(newest_jar(&releases).is_none());
         assert!(newest_jar(&releases_from("[]")).is_none());
     }

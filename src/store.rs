@@ -132,7 +132,6 @@ fn write_json_private<T: Serialize>(path: &Path, value: &T) -> Result<()> {
     file.sync_all()?;
     drop(file);
 
-    std::fs::rename(&tmp, path)
-        .with_context(|| format!("could not write {}", path.display()))?;
+    std::fs::rename(&tmp, path).with_context(|| format!("could not write {}", path.display()))?;
     Ok(())
 }

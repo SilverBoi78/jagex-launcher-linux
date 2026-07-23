@@ -1,5 +1,7 @@
 # jagex-launcher-linux (`rsclient`)
 
+[![CI](https://github.com/SilverBoi78/jagex-launcher-linux/actions/workflows/ci.yml/badge.svg)](https://github.com/SilverBoi78/jagex-launcher-linux/actions/workflows/ci.yml)
+
 A native Linux launcher for **RuneScape 3**, **Old School RuneScape** and **RuneLite**,
 using a Jagex account — an alternative to the Windows-only Jagex Launcher and to the
 abandoned Bolt.

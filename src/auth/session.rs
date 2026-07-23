@@ -57,7 +57,10 @@ pub fn create_session(client: &reqwest::blocking::Client, id_token: &IdToken) ->
 /// A `401` here means the session has lapsed and the user has to log in again; that is
 /// reported distinctly so callers can clear the stored session rather than show a generic
 /// network error.
-pub fn fetch_accounts(client: &reqwest::blocking::Client, session_id: &str) -> Result<Vec<Account>> {
+pub fn fetch_accounts(
+    client: &reqwest::blocking::Client,
+    session_id: &str,
+) -> Result<Vec<Account>> {
     let response = client
         .get(format!("{AUTH_ORIGIN}/game-session/v1/accounts"))
         .header(reqwest::header::ACCEPT, "application/json")
@@ -124,8 +127,7 @@ mod tests {
 
     #[test]
     fn parses_the_session_id() {
-        let parsed: SessionResponse =
-            serde_json::from_str(r#"{"sessionId":"sess-123"}"#).unwrap();
+        let parsed: SessionResponse = serde_json::from_str(r#"{"sessionId":"sess-123"}"#).unwrap();
         assert_eq!(parsed.session_id, "sess-123");
     }
 

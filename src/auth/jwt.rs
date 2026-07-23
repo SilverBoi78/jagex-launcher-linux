@@ -121,9 +121,8 @@ mod tests {
     #[test]
     fn tolerates_padded_segments() {
         let payload = serde_json::json!({ "sub": "padded" });
-        let body = base64::engine::general_purpose::URL_SAFE.encode(
-            serde_json::to_vec(&payload).unwrap(),
-        );
+        let body =
+            base64::engine::general_purpose::URL_SAFE.encode(serde_json::to_vec(&payload).unwrap());
         let token = format!("h.{body}.s");
         assert_eq!(decode_claims(&token).unwrap().sub, "padded");
     }
