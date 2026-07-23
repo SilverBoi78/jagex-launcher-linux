@@ -30,12 +30,28 @@ sudo pacman -S --needed wine                           # only for the official O
 as they do in the official launcher. RuneLite needs a JRE. Wine is only needed for
 Jagex's own Old School client — RuneLite plays Old School natively.
 
-## Build and run
+## Install
+
+Download the latest tarball from
+[Releases](https://github.com/SilverBoi78/jagex-launcher-linux/releases):
+
+```sh
+tar xzf rsclient-*-x86_64-linux.tar.gz && cd rsclient-*-x86_64-linux
+install -Dm755 rsclient ~/.local/bin/rsclient
+install -Dm644 rsclient.desktop ~/.local/share/applications/rsclient.desktop
+```
+
+No root needed, provided `~/.local/bin` is on your `PATH`.
+
+## Build from source
 
 ```sh
 cargo build --release
 ./target/release/rsclient
 ```
+
+Takes about a minute. Build this way if your glibc is older than the one the release
+binary was built against — the release notes state which.
 
 ## How signing in works
 

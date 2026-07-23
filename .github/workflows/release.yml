@@ -1,0 +1,127 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build and release (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Resolve version
+        id: version
+        run: |
+          tag="${{ inputs.tag || github.ref_name }}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      # A tag that disagrees with Cargo.toml would ship a binary whose --version
+      # contradicts its own release page, so stop before building.
+      - name: Check the tag matches Cargo.toml
+        run: |
+          crate_version="$(sed -n '/^\[package\]/,/^\[/s/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)"
+          if [ "$crate_version" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::tag is ${{ steps.version.outputs.tag }} but Cargo.toml says $crate_version"
+            exit 1
+          fi
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libxkbcommon-dev \
+            libwayland-dev \
+            libgl1-mesa-dev \
+            pkg-config
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Package
+        id: package
+        run: |
+          name="rsclient-${{ steps.version.outputs.version }}-x86_64-linux"
+          mkdir -p "dist/$name"
+          cp target/release/rsclient "dist/$name/"
+          cp README.md LICENSE "dist/$name/"
+          cp assets/rsclient.desktop "dist/$name/"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          ( cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256" )
+          echo "archive=dist/$name.tar.gz" >> "$GITHUB_OUTPUT"
+          echo "checksum=dist/$name.tar.gz.sha256" >> "$GITHUB_OUTPUT"
+
+      # The binary links against the system's webkit2gtk and GTK, so record exactly
+      # what it was built against — that is what determines whether it runs elsewhere.
+      - name: Record runtime requirements
+        id: requirements
+        run: |
+          {
+            echo "glibc=$(ldd --version | head -1 | awk '{print $NF}')"
+            echo "webkit=$(pkg-config --modversion webkit2gtk-4.1)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<EOF
+          ## Install
+
+          \`\`\`sh
+          tar xzf rsclient-${{ steps.version.outputs.version }}-x86_64-linux.tar.gz
+          cd rsclient-${{ steps.version.outputs.version }}-x86_64-linux
+          install -Dm755 rsclient ~/.local/bin/rsclient
+          install -Dm644 rsclient.desktop ~/.local/share/applications/rsclient.desktop
+          \`\`\`
+
+          ## Runtime requirements
+
+          This binary links against your system's GTK and WebKit rather than bundling
+          them, so you need:
+
+          | Dependency | Purpose | Arch package |
+          |---|---|---|
+          | webkit2gtk-4.1 | Renders the Jagex sign-in page | \`webkit2gtk-4.1\` |
+          | A Java runtime | RuneLite only | \`jre17-openjdk\` |
+          | Wine or umu-run | Official OSRS client only | \`wine\` |
+
+          Built against glibc ${{ steps.requirements.outputs.glibc }} and
+          webkit2gtk ${{ steps.requirements.outputs.webkit }}. Older glibc than that
+          will not run it — build from source instead, it takes about a minute.
+
+          Verify the download with \`sha256sum -c\` against the \`.sha256\` file.
+
+          ---
+          EOF
+
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --notes-file notes.md \
+            --generate-notes \
+            "${{ steps.package.outputs.archive }}" \
+            "${{ steps.package.outputs.checksum }}"
