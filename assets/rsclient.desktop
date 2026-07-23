@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=rsclient
+GenericName=RuneScape Launcher
+Comment=Play RuneScape 3, Old School RuneScape and RuneLite with a Jagex account
+Exec=rsclient %u
+Icon=rsclient
+Terminal=false
+Categories=Game;RolePlaying;
+Keywords=RuneScape;OSRS;RS3;RuneLite;Jagex;
+StartupWMClass=rsclient
+# Registering the jagex: scheme lets the fallback login path work, for the case where
+# Jagex's redirect page bounces to the custom URI scheme instead of the https redirect
+# the launcher normally intercepts.
+MimeType=x-scheme-handler/jagex;
