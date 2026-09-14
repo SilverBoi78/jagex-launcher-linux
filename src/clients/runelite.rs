@@ -84,6 +84,10 @@ fn ensure_jar(client: &reqwest::blocking::Client, log: &Log) -> Result<PathBuf> 
         let releases: Vec<Release> = client
             .get(RELEASES_URL)
             .header(reqwest::header::ACCEPT, "application/vnd.github+json")
+            .header(
+                reqwest::header::USER_AGENT,
+                concat!("rsclient/", env!("CARGO_PKG_VERSION")),
+            )
             .send()?
             .error_for_status()?
             .json()
