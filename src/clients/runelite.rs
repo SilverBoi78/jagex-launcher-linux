@@ -115,13 +115,19 @@ fn ensure_jar(client: &reqwest::blocking::Client, log: &Log) -> Result<PathBuf> 
         return Ok(jar);
     }
 
+   let download_client = reqwest::blocking::Client::builder()
+    .user_agent(concat!("rsclient/", env!("CARGO_PKG_VERSION")))
+    .build()
+    .context("could not create RuneLite download client")?;
+
     let bytes = download(
-        client,
+        &download_client,
         &asset.browser_download_url,
         "RuneLite",
         Some(asset.size),
         log,
     )?;
+    
     write_file(&jar, &bytes, 0o644)?;
     std::fs::write(&id_file, asset.id.to_string())?;
     Ok(jar)
