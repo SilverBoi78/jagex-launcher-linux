@@ -3,6 +3,7 @@
 use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use super::{Launch, download, find_java, write_file};
 use crate::log::Log;
@@ -69,11 +70,25 @@ fn seed_from_bolt(log: &Log) -> Result<bool> {
     Ok(true)
 }
 
+/// An HTTP client for GitHub, separate from the Jagex auth client.
+///
+/// GitHub's API rejects requests without a User-Agent, and release downloads redirect to
+/// a CDN host, so this client sends one and follows redirects — neither of which the
+/// auth client does.
+fn github_client() -> Result<reqwest::blocking::Client> {
+    reqwest::blocking::Client::builder()
+        .user_agent(concat!("rsclient/", env!("CARGO_PKG_VERSION")))
+        .connect_timeout(Duration::from_secs(30))
+        .build()
+        .context("could not create an HTTP client for GitHub")
+}
+
 /// Ensures a usable `runelite.jar` exists, downloading or updating it as needed.
 ///
 /// A failed update check is not fatal when a jar is already present — being offline
 /// should not stop you playing.
-fn ensure_jar(client: &reqwest::blocking::Client, log: &Log) -> Result<PathBuf> {
+fn ensure_jar(log: &Log) -> Result<PathBuf> {
+    let client = github_client()?;
     let jar = jar_path()?;
     let id_file = installed_id_path()?;
     let installed_id = std::fs::read_to_string(&id_file).ok();
@@ -112,7 +127,7 @@ fn ensure_jar(client: &reqwest::blocking::Client, log: &Log) -> Result<PathBuf> 
     }
 
     let bytes = download(
-        client,
+        &client,
         &asset.browser_download_url,
         "RuneLite",
         Some(asset.size),
@@ -135,12 +150,7 @@ fn existing_jar(jar: &std::path::Path) -> Result<PathBuf> {
 ///
 /// `custom_jar` skips the download entirely and uses the user's own jar.
 /// `configure` opens RuneLite's launcher settings dialog instead of playing.
-pub fn prepare(
-    client: &reqwest::blocking::Client,
-    custom_jar: Option<&str>,
-    configure: bool,
-    log: &Log,
-) -> Result<Launch> {
+pub fn prepare(custom_jar: Option<&str>, configure: bool, log: &Log) -> Result<Launch> {
     let jar = match custom_jar.map(str::trim).filter(|s| !s.is_empty()) {
         Some(path) => {
             let path = PathBuf::from(path);
@@ -152,7 +162,7 @@ pub fn prepare(
             }
             path
         }
-        None => ensure_jar(client, log)?,
+        None => ensure_jar(log)?,
     };
 
     let java = find_java()?;
