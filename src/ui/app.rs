@@ -215,12 +215,7 @@ impl App {
 
             let (launch, wrapper) = match which {
                 Client::RuneLite => (
-                    clients::runelite::prepare(
-                        &client,
-                        config.runelite_custom_jar.as_deref(),
-                        false,
-                        log,
-                    )?,
+                    clients::runelite::prepare(config.runelite_custom_jar.as_deref(), false, log)?,
                     config.runelite_launch_command.clone(),
                 ),
                 Client::Rs3 => (
